@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
-import { signInWithGoogle } from "./actions";
+import { signInWithGoogle } from "../../actions/login";
 import { LoginForm } from "./login-form";
 
 export default function LoginPage() {

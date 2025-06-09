@@ -8,10 +8,12 @@ import {
 } from "@/components/ui/sidebar";
 import { createClient } from "@/utils/supabase/server";
 import { NavUser } from "./nav-user";
-import { BookUser } from "lucide-react";
+import { BookUser, Plus, Tags } from "lucide-react";
 import { NavGroups } from "./nav-groups";
 import { NavMain } from "./nav-main";
 import { NavHeader } from "./nav-header";
+import { fetchUserGroups } from "@/lib/data";
+import ExpenseCreatorDialog from "../expenses/create/dialog";
 
 const data = {
   groups: [
@@ -26,6 +28,11 @@ const data = {
       href: "/",
       icon: BookUser,
     },
+    {
+      title: "Tags",
+      href: "/tags",
+      icon: Tags,
+    },
   ],
 };
 
@@ -34,6 +41,8 @@ export async function AppSidebar() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  const groups = await fetchUserGroups();
   return (
     <Sidebar variant="inset">
       <SidebarHeader>
@@ -41,8 +50,9 @@ export async function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup className="gap-1">
+          <ExpenseCreatorDialog />
           <NavMain items={data.navMain} />
-          <NavGroups groups={data.groups} />
+          <NavGroups groups={groups} />
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter>

@@ -15,15 +15,9 @@ import {
 } from "../ui/collapsible";
 import { headers } from "next/headers";
 import { cn } from "@/lib/utils";
+import { Group } from "@/lib/schema";
 
-export async function NavGroups({
-  groups,
-}: {
-  groups: {
-    name: string;
-    href: string;
-  }[];
-}) {
+export async function NavGroups({ groups }: { groups: Group[] }) {
   const headersList = await headers();
   const currentPath = headersList.get("x-current-path") ?? "";
   const isActive = (path: string) => currentPath === path;
@@ -46,11 +40,11 @@ export async function NavGroups({
                     asChild
                     className={cn({
                       "bg-accent text-accent-foreground": isActive(
-                        subItem.href
+                        `/groups/${subItem.id}`
                       ),
                     })}
                   >
-                    <Link href={subItem.href}>
+                    <Link href={`/groups/${subItem.id}`}>
                       <span>{subItem.name}</span>
                     </Link>
                   </SidebarMenuSubButton>

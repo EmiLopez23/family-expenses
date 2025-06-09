@@ -26,26 +26,53 @@ CREATE TABLE IF NOT EXISTS group_members (
   UNIQUE(group_id, user_id)
 );
 
--- Create tags table
+-- Create tags table (now completely independent)
 CREATE TABLE IF NOT EXISTS tags (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name TEXT NOT NULL,
-  color TEXT NOT NULL DEFAULT '#cccccc',
-  group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
+  color TEXT DEFAULT '#cccccc',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  UNIQUE(name, group_id)
+  created_by UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  UNIQUE(name)
 );
 
--- Create expenses table
+-- Create group_tags table for many-to-many relationship
+CREATE TABLE IF NOT EXISTS group_tags (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  tag_id UUID REFERENCES tags(id) ON DELETE CASCADE NOT NULL,
+  group_id UUID REFERENCES groups(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(tag_id, group_id)
+);
+
+-- Create currencies table
+CREATE TABLE IF NOT EXISTS currencies (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  code TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  symbol TEXT NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create expenses table (single source of truth)
 CREATE TABLE IF NOT EXISTS expenses (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  group_id UUID REFERENCES groups(id) ON DELETE CASCADE,
-  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   amount DECIMAL(10,2) NOT NULL,
   description TEXT NOT NULL,
   date DATE NOT NULL DEFAULT CURRENT_DATE,
+  currency_id UUID REFERENCES currencies(id) ON DELETE RESTRICT NOT NULL,
+  parent_id UUID REFERENCES expenses(id) ON DELETE CASCADE,
+  created_by UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS group_expenses (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  group_id UUID REFERENCES groups(id) ON DELETE CASCADE NOT NULL,
+  expense_id UUID REFERENCES expenses(id) ON DELETE CASCADE NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  UNIQUE(group_id, expense_id)
 );
 
 -- Create expenses_tags table (for many-to-many relationship between expenses and tags)
@@ -64,6 +91,7 @@ ALTER TABLE group_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE expenses_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE group_tags ENABLE ROW LEVEL SECURITY;
 
 -- Profiles policies
 CREATE POLICY "Users can view their own profile" 
@@ -172,18 +200,35 @@ CREATE POLICY "Group admins can delete members"
   );
 
 -- Tags policies
-CREATE POLICY "Group members can view tags" 
+CREATE POLICY "Anyone can view tags" 
   ON tags FOR SELECT 
+  USING (true);
+
+CREATE POLICY "Users can create tags" 
+  ON tags FOR INSERT 
+  WITH CHECK (auth.role() = 'authenticated');
+
+CREATE POLICY "Users can update their own tags" 
+  ON tags FOR UPDATE 
+  USING (created_by = auth.uid());
+
+CREATE POLICY "Users can delete their own tags" 
+  ON tags FOR DELETE 
+  USING (created_by = auth.uid());
+
+-- Tags groups policies
+CREATE POLICY "Group members can view group tags" 
+  ON group_tags FOR SELECT 
   USING (
     EXISTS (
       SELECT 1 FROM group_members
-      WHERE group_members.group_id = tags.group_id
+      WHERE group_members.group_id = group_tags.group_id
       AND group_members.user_id = auth.uid()
     )
   );
 
-CREATE POLICY "Group members can create tags" 
-  ON tags FOR INSERT 
+CREATE POLICY "Group members can add tags to groups" 
+  ON group_tags FOR INSERT 
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM group_members
@@ -192,71 +237,47 @@ CREATE POLICY "Group members can create tags"
     )
   );
 
-CREATE POLICY "Group admins can update tags" 
-  ON tags FOR UPDATE 
+CREATE POLICY "Group admins can remove tags from groups" 
+  ON group_tags FOR DELETE 
   USING (
     EXISTS (
       SELECT 1 FROM group_members
-      WHERE group_members.group_id = tags.group_id
-      AND group_members.user_id = auth.uid()
-      AND group_members.role = 'admin'
-    )
-  );
-
-CREATE POLICY "Group admins can delete tags" 
-  ON tags FOR DELETE 
-  USING (
-    EXISTS (
-      SELECT 1 FROM group_members
-      WHERE group_members.group_id = tags.group_id
+      WHERE group_members.group_id = group_id
       AND group_members.user_id = auth.uid()
       AND group_members.role = 'admin'
     )
   );
 
 -- Expenses policies
-CREATE POLICY "Group members can view expenses" 
+CREATE POLICY "Users can view their own expenses" 
   ON expenses FOR SELECT 
-  USING (
-    EXISTS (
-      SELECT 1 FROM group_members
-      WHERE group_members.group_id = expenses.group_id
-      AND group_members.user_id = auth.uid()
-    )
-  );
+  USING (created_by = auth.uid());
 
-CREATE POLICY "Group members can create expenses" 
+CREATE POLICY "Users can create expenses" 
   ON expenses FOR INSERT 
-  WITH CHECK (
-    auth.uid() = user_id AND
-    EXISTS (
-      SELECT 1 FROM group_members
-      WHERE group_members.group_id = group_id
-      AND group_members.user_id = auth.uid()
-    )
-  );
+  WITH CHECK (auth.uid() = created_by);
 
 CREATE POLICY "Users can update their own expenses" 
   ON expenses FOR UPDATE 
-  USING (
-    auth.uid() = user_id
-  );
+  USING (created_by = auth.uid());
 
 CREATE POLICY "Users can delete their own expenses" 
   ON expenses FOR DELETE 
-  USING (
-    auth.uid() = user_id
-  );
+  USING (created_by = auth.uid());
 
 -- Bill tags policies
-CREATE POLICY "Group members can view expense tags" 
+CREATE POLICY "Users can view expense tags" 
   ON expenses_tags FOR SELECT 
   USING (
     EXISTS (
-      SELECT 1 FROM expenses
-      JOIN group_members ON expenses.group_id = group_members.group_id
-      WHERE expenses.id = expenses_tags.expense_id
-      AND group_members.user_id = auth.uid()
+      SELECT 1 FROM expenses e
+      LEFT JOIN group_expenses ge ON ge.expense_id = e.id
+      LEFT JOIN group_members gm ON gm.group_id = ge.group_id
+      WHERE e.id = expenses_tags.expense_id
+      AND (
+        e.created_by = auth.uid() OR
+        (gm.user_id = auth.uid() AND ge.group_id = gm.group_id)
+      )
     )
   );
 
@@ -266,7 +287,7 @@ CREATE POLICY "Expense creators can add tags to their expenses"
     EXISTS (
       SELECT 1 FROM expenses
       WHERE expenses.id = expense_id
-      AND expenses.user_id = auth.uid()
+      AND expenses.created_by = auth.uid()
     )
   );
 
@@ -276,7 +297,7 @@ CREATE POLICY "Expense creators can remove tags from their expenses"
     EXISTS (
       SELECT 1 FROM expenses
       WHERE expenses.id = expense_id
-      AND expenses.user_id = auth.uid()
+      AND expenses.created_by = auth.uid()
     )
   );
 
