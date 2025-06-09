@@ -11,7 +11,7 @@ import {
 } from "./schema";
 
 // need to do everything in here so we just use one sql client instance
-const sql = postgres(process.env.DATABASE_URL!, {
+const sql = postgres(process.env.POSTGRES_URL!, {
   idle_timeout: 20,
   max_lifetime: 60 * 30,
 });
