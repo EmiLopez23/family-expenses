@@ -19,6 +19,7 @@ import { createTag } from "@/actions/create/tag";
 
 export default function TagCreatorDialog() {
   const form = useForm<CreateTag>({
+    // @ts-expect-error - zodResolver is not typed correctly
     resolver: zodResolver(createTagSchema),
     defaultValues: {
       name: "",
@@ -26,7 +27,7 @@ export default function TagCreatorDialog() {
     },
   });
 
-  const clientAction = async (_: FormData) => {
+  const clientAction = async () => {
     const formData = new FormData();
     formData.set("name", form.getValues("name"));
     formData.set("color", form.getValues("color"));

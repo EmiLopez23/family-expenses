@@ -50,7 +50,7 @@ export default function GroupCreatorDialog({ users }: GroupCreatorDialogProps) {
     });
   };
 
-  const clientAction = async (_: FormData) => {
+  const clientAction = async () => {
     const formData = new FormData();
     formData.set("name", form.getValues("name"));
     formData.set("description", form.getValues("description") || "");

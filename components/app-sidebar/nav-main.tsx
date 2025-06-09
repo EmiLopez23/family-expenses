@@ -1,13 +1,11 @@
 import { LucideIcon } from "lucide-react";
 import {
-  SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from "../ui/sidebar";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { headers } from "next/headers";
 export async function NavMain({

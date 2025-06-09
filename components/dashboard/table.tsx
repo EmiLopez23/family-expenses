@@ -7,6 +7,5 @@ interface Props {
 }
 
 export default async function DashboardTable({ data }: Props) {
-  console.log(data);
   return <Table<Expense> data={data} columns={columns} />;
 }

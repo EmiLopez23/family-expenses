@@ -61,8 +61,6 @@ export const fetchGroupCardData = async (
     type: "expenses";
   }[]
 > => {
-  const supabase = await createClient();
-
   const expensesSum = await sql<{ total: number }[]>`
     SELECT SUM(amount) as total 
     FROM expenses e
@@ -119,8 +117,6 @@ export const fetchGroupExpenses = async (
   endDate: string,
   groupId: string
 ) => {
-  const supabase = await createClient();
-
   const expenses = await sql<Expense[]>`
     SELECT * FROM expenses e
     LEFT JOIN group_expenses ge ON e.id = ge.expense_id
@@ -285,8 +281,6 @@ export const createExpense = async (
       VALUES (${expense.amount}, ${expense.description}, ${expense.currency_id}, ${expense.date}, ${expense.created_by}, ${expense.parent_id})
       RETURNING id
     `;
-
-    console.log(exp);
 
     // insert groups and tags in parallel
     await Promise.all([

@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/sidebar";
 import { createClient } from "@/utils/supabase/server";
 import { NavUser } from "./nav-user";
-import { BookUser, Plus, Tags } from "lucide-react";
+import { BookUser, Tags } from "lucide-react";
 import { NavGroups } from "./nav-groups";
 import { NavMain } from "./nav-main";
 import { NavHeader } from "./nav-header";

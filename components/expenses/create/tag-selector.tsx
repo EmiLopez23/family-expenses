@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, ChevronsUpDown, Plus, Search, X } from "lucide-react";
+import { ChevronsUpDown, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -15,7 +15,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 
@@ -43,16 +42,6 @@ export function TagSelector({
     } else {
       onTagsChange([...selectedTags, tag]);
     }
-  };
-
-  const handleCreateTag = () => {
-    // if (!tagSearchValue.trim()) return;
-    // const newTag = {
-    //   id: `new-${Date.now()}`,
-    //   name: tagSearchValue.trim(),
-    // };
-    // onTagsChange([...selectedTags, newTag]);
-    // setTagSearchValue("");
   };
 
   const handleRemoveTag = (tagId: string) => {
@@ -103,17 +92,6 @@ export function TagSelector({
               <CommandEmpty>
                 <div className="py-3 px-4 text-sm">
                   <p>No tags found.</p>
-                  {tagSearchValue !== "" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2 w-full"
-                      onClick={handleCreateTag}
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Create "{tagSearchValue}"
-                    </Button>
-                  )}
                 </div>
               </CommandEmpty>
               <CommandGroup>

@@ -1,9 +1,8 @@
-import { Check } from "lucide-react";
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
 
 export type Group = {
   id: string;

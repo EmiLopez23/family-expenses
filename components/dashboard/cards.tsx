@@ -1,8 +1,7 @@
 import { DollarSign } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { fetchCardData } from "@/lib/data";
-import { endOfMonth, startOfMonth } from "date-fns";
 import NumberFlow from "@number-flow/react";
+
 const iconMap = {
   expenses: DollarSign,
 };
